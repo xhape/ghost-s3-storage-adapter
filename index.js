@@ -3,89 +3,115 @@
 // # S3 storage module for Ghost blog http://ghost.org/
 var fs = require('fs');
 var path = require('path');
-var nodefn = require('when/node/function');
-var when = require('when');
-var readFile = nodefn.lift(fs.readFile);
-var unlink = nodefn.lift(fs.unlink);
-var AWS = require('aws-sdk');
+var Bluebird = require('bluebird');
+var AWS = require('aws-sdk-promise');
+var moment = require('moment');
+var readFileAsync = Bluebird.promisify(fs.readFile);
 var options = {};
 
 function S3Store(config) {
-  options = config || {};
+    options = config;
 }
 
-S3Store.prototype.save = function(image) {
-    var self = this;
-    if (!options) return when.reject('ghost-s3 is not configured');
+function getAwsPath(bucket) {
+    var awsPath = 'https://' + bucket + '.s3.amazonaws.com/';
+    return awsPath;
+}
 
-    var targetDir = self.getTargetDir();
-    var targetFilename = self.getTargetName(image, targetDir);
-    var awsPath = options.assetHost ? options.assetHost : 'https://' + options.bucket + '.s3.amazonaws.com/';
-
-    return readFile(image.path)
-    .then(function(buffer) {
-        var s3 = new AWS.S3({
-          accessKeyId: options.accessKeyId,
-          secretAccessKey: options.secretAccessKey,
-          bucket: options.bucket,
-          region: options.region
-        });
-
-        return nodefn.call(s3.putObject.bind(s3), {
-            ACL: 'public-read',
-            Bucket: options.bucket,
-            Key: targetFilename,
-            Body: buffer,
-            ContentType: image.type,
-            CacheControl: 'max-age=' + (30 * 24 * 60 * 60) // 30 days
-        });
-    })
-    .then(function(result) {
-        self.logInfo('ghost-s3', 'Temp uploaded file path: ' + image.path);
-    })
-    .then(function() {
-        return when.resolve(awsPath + targetFilename);
-    })
-    .catch(function(err) {
-        // fs.unlink(image.path, function (err) {
-        //     if (err) throw err;
-        //     errors.logInfo('ghost-s3', 'Successfully deleted temp file uploaded');
-        // });
-        self.logError(err);
-        throw err;
-    });
+function logError(error) {
+    console.log('error in ghost-s3', error);
 };
 
-// middleware for serving the files
-S3Store.prototype.serve = function() {
-    // a no-op, these are absolute URLs
-    return function (req, res, next) {
-      next();
-    };
+function logInfo(info) {
+    console.log('info in ghost-s3', info);
 };
 
-S3Store.prototype.getTargetDir = function() {
-    var MONTHS = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    var now = new Date();
-    return now.getFullYear() + '/' + MONTHS[now.getMonth()] + '/';
+function getTargetDir() {
+    var now = moment();
+    return now.format('YYYY/MM/');
 };
 
-S3Store.prototype.getTargetName = function(image, targetDir) {
-    var ext = path.extname(image.name),
-        name = path.basename(image.name, ext).replace(/\W/g, '_');
+function getTargetName(image, targetDir) {
+    var ext = path.extname(image.name);
+    var name = path.basename(image.name, ext).replace(/\W/g, '_');
 
     return targetDir + name + '-' + Date.now() + ext;
 };
 
-S3Store.prototype.logError = function(error) {
-    console.log('error in ghost-s3', error);
+function validOptions(opts) {
+    return (opts.accessKeyId &&
+        opts.secretAccessKey &&
+        opts.bucket &&
+        opts.region);
+}
+
+S3Store.prototype.save = function(image) {
+    if (!validOptions(options)) {
+      return Bluebird.reject('ghost-s3 is not configured');
+    }
+
+    var targetDir = getTargetDir();
+    var targetFilename = getTargetName(image, targetDir);
+
+    var s3 = new AWS.S3({
+        accessKeyId: options.accessKeyId,
+        secretAccessKey: options.secretAccessKey,
+        bucket: options.bucket,
+        region: options.region
+    });
+
+    return readFileAsync(image.path)
+        .then(function(buffer) {
+            var params = {
+                ACL: 'public-read',
+                Bucket: options.bucket,
+                Key: targetFilename,
+                Body: buffer,
+                ContentType: image.type,
+                CacheControl: 'max-age=' + (1000 * 365 * 24 * 60 * 60) // 365 days
+            };
+
+            return s3.putObject(params).promise();
+        })
+        .tap(function() {
+            logInfo('ghost-s3', 'Temp uploaded file path: ' + image.path);
+        })
+        .then(function(results) {
+            var awsPath = getAwsPath(options.bucket);
+            return Bluebird.resolve(awsPath + targetFilename);
+        })
+        .catch(function(err) {
+            logError(err);
+            throw err;
+        });
 };
 
-S3Store.prototype.logInfo = function(info) {
-    console.log('info in ghost-s3', info);
+// middleware for serving the files
+S3Store.prototype.serve = function() {
+    var s3 = new AWS.S3({
+        accessKeyId: options.accessKeyId,
+        secretAccessKey: options.secretAccessKey,
+        bucket: options.bucket,
+        region: options.region
+    });
+
+    return function (req, res, next) {
+        var params = {
+            Bucket: options.bucket,
+            Key: req.path.replace(/^\//, '')
+        };
+
+        s3.getObject(params)
+            .on('httpHeaders', function(statusCode, headers, response) {
+                res.set(headers);
+            })
+            .createReadStream()
+            .on('error', function(err) {
+                res.status(404);
+                next();
+            })
+            .pipe(res);
+    };
 };
 
 module.exports = S3Store;
