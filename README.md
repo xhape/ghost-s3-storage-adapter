@@ -9,18 +9,13 @@ images in your blog will not be affected.
 
 ## Installation
 
+You will need to have a the custom storage module directly in your project
+directory, the easiest way to do this is:
+
 ```bash
-$ npm install --save ghost-s3-compat
-```
-
-## Create a storage module
-
-Create a file `content/storage/ghost-s3/index.js` (manually create those folders
-if they do not exist). Put this code inside of it.
-
-```javascript
-'use strict';
-module.exports = require('ghost-s3-compat');
+$ npm install ghost-s3-compat
+$ mkdir content/storage
+$ cp -r node_modules/ghost-s3-compat content/storage/ghost-s3-compat
 ```
 
 ## Configuration
