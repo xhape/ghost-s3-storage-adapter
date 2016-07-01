@@ -107,6 +107,7 @@ S3Store.prototype.serve = function() {
             })
             .createReadStream()
             .on('error', function(err) {
+                logError(err);
                 res.status(404);
                 next();
             })
