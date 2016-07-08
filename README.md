@@ -25,6 +25,7 @@ Create new IAM User with permissions to get object from that bucket. Save the
 
 In `config.js`, add a `storage` block for each environment.
 
+```javascript
     storage: {
         active: 'ghost-s3',
         'ghost-s3': {
@@ -34,8 +35,27 @@ In `config.js`, add a `storage` block for each environment.
             region: 'Put_your_bucket_region_here'
         }
     },
+```
+
 
 ### Asset host
+
+You can add `assetHost` to your config to specify a virtual host url. This is
+most frequently used with a content delivery network (CDN) such as CloudFront,
+CloudFlare, or others. The modified `storage` block would be:
+
+```javascript
+    storage: {
+        active: 'ghost-s3',
+        'ghost-s3': {
+            accessKeyId: 'ACCESS_KEY',
+            secretAccessKey: 'SECRET_ACCESS_KEY',
+            bucket: 'S3_BUCKET_NAME',
+            region: 'S3_REGION',
+            assetHost: 'https://cdn.yourdomain.com/'
+        }
+    }
+```
 
 You can add `assetHost` to your config to specify a virtual host url. For more
 information, [read this section](http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html)
@@ -46,4 +66,4 @@ in the AWS docs.
 - Original work Copyright (c) 2015 Hoang Pham Huu <phamhuuhoang@gmail.com>
 - Modified work Copyright (c) 2016 Curiosity Media, Inc.
 
-Released under the [MIT license](https://github.com/muzix/ghost-s3/blob/master/LICENSE).
+Released under the [MIT license](https://github.com/spanishdict/ghost-s3-compat/blob/master/LICENSE).
