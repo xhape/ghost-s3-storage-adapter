@@ -13,8 +13,14 @@ function S3Store(config) {
     options = config;
 }
 
+ /**
+ * Return the URL where image assets can be read.
+ * @param  {String} bucket [AWS S3 bucket name]
+ * @return {String}        [path-style URL of the S3 bucket]
+ */
 function getAwsPath(bucket) {
-    var awsPath = 'https://' + bucket + '.s3.amazonaws.com/';
+    var awsRegion = (options.region == 'us-east-1') ? 's3' : 's3-' + options.region;
+    var awsPath = options.assetHost ? options.assetHost : 'https://' + awsRegion + '.amazonaws.com/' + options.bucket + '/';
     return awsPath;
 }
 
