@@ -7,9 +7,11 @@ var Bluebird = require('bluebird');
 var AWS = require('aws-sdk-promise');
 var moment = require('moment');
 var readFileAsync = Bluebird.promisify(fs.readFile);
+var BaseStore = require('ghost/core/server/storage/base');
 var options = {};
 
 function S3Store(config) {
+    BaseStore.call(this);
     options = config;
 }
 
@@ -26,23 +28,11 @@ function getAwsPath(bucket) {
 
 function logError(error) {
     console.log('error in ghost-s3', error);
-};
+}
 
 function logInfo(info) {
     console.log('info in ghost-s3', info);
-};
-
-function getTargetDir() {
-    var now = moment();
-    return now.format('YYYY/MM/');
-};
-
-function getTargetName(image, targetDir) {
-    var ext = path.extname(image.name);
-    var name = path.basename(image.name, ext).replace(/\W/g, '_');
-
-    return targetDir + name + '-' + Date.now() + ext;
-};
+}
 
 function validOptions(opts) {
     return (opts.accessKeyId &&
@@ -51,13 +41,19 @@ function validOptions(opts) {
         opts.region);
 }
 
+S3Store.prototype.getTargetName = function(file) {
+    var ext = path.extname(file.name);
+    var name = path.basename(file.name, ext).replace(/\W/g, '_');
+
+    return path.join(this.getTargetDir(), name + '-' + Date.now() + ext);
+};
+
 S3Store.prototype.save = function(image) {
     if (!validOptions(options)) {
       return Bluebird.reject('ghost-s3 is not configured');
     }
 
-    var targetDir = getTargetDir();
-    var targetFilename = getTargetName(image, targetDir);
+    var targetFilename = this.getTargetName(image);
 
     var s3 = new AWS.S3({
         accessKeyId: options.accessKeyId,
@@ -119,6 +115,14 @@ S3Store.prototype.serve = function() {
             })
             .pipe(res);
     };
+};
+
+S3Store.prototype.delete = function() {
+
+};
+
+S3Store.prototype.exists = function() {
+
 };
 
 module.exports = S3Store;
