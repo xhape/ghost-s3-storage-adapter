@@ -6,6 +6,7 @@ var path = require('path');
 var Bluebird = require('bluebird');
 var AWS = require('aws-sdk-promise');
 var moment = require('moment');
+var util = require('util');
 var readFileAsync = Bluebird.promisify(fs.readFile);
 var BaseStore = require('ghost/core/server/storage/base');
 var options = {};
@@ -14,6 +15,8 @@ function S3Store(config) {
     BaseStore.call(this);
     options = config;
 }
+
+util.inherits(S3Store, BaseStore);
 
  /**
  * Return the URL where image assets can be read.
