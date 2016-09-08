@@ -7,7 +7,15 @@ var Bluebird = require('bluebird');
 var AWS = require('aws-sdk');
 var util = require('util');
 var readFileAsync = Bluebird.promisify(fs.readFile);
-var BaseStore = require('ghost/core/server/storage/base');
+
+var BaseStore;
+try {
+    BaseStore = require('ghost/core/server/storage/base');
+} catch (e) {
+    if (e.code !== 'MODULE_NOT_FOUND') throw e;
+    BaseStore = require(path.join(process.cwd(), 'core/server/storage/base'));
+}
+
 var options = {};
 
 function S3Store(config) {
