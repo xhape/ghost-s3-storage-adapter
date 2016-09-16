@@ -1,6 +1,6 @@
 {
   "name": "ghost-s3-compat",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Store Ghost's images on S3 and proxy requests for local images to S3.",
   "main": "index.js",
   "scripts": {
