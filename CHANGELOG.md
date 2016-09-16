@@ -1,4 +1,20 @@
-# ghost-s3-compat
+# ghost-s3-storage-adapter
+
+## 3.0.3
+- Name change to ghost-s3-storage-adapter
+
+## 3.0.2
+- Bug fix
+
+## 3.0.1
+- Bug fix
+
+## 3.0.0
+- Complete rewrite and implementation of delete and exists methods
+
+## 2.0.1
+- Forked [aorcsik/ghost-s3-storage-adapter](https://github.com/aorcsik/ghost-s3-storage-adapter) from [spanishdict/ghost-s3-compat](https://github.com/spanishdict/ghost-s3-compat)
+- Initial changes to make it compatible with [ghost 0.10.0 breaking chnages](https://github.com/TryGhost/Ghost/wiki/Using-a-custom-storage-module#breaking-changes)
 
 ## 2.0.0
 
@@ -11,7 +27,7 @@
 avoid certificate validation failures.  This is necessary because common bucket
 naming can include one or more dots `(.)`, such as images.yourdomain.com. If you
 a virtual-hosted–style URL https://images.yourdomain.com.s3.amazonaws.com would
-fail a certificate validity check because AWS uses a *.s3.amazonaws.com wildcard
+fail a certificate validity check because AWS uses a \*.s3.amazonaws.com wildcard
 cert. The certificate would be deemed invalid because RFC2818 allows matching of
 only a single domain for a given wild card character.
 

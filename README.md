@@ -13,9 +13,9 @@ You will need to have a the custom storage module directly in your project
 directory, the easiest way to do this is:
 
 ```bash
-$ npm install ghost-s3-compat
+$ npm install ghost-s3-storage-adapter
 $ mkdir content/storage
-$ cp -r node_modules/ghost-s3-compat content/storage/ghost-s3-compat
+$ cp -r node_modules/ghost-s3-storage-adapter content/storage/ghost-s3
 ```
 
 Alternative method is to use the node module and create an index.js file with
@@ -23,7 +23,7 @@ folder path 'content/storage/ghost-s3/index.js' (manually create folder if not e
 
 ```javascript
 'use strict';
-module.exports = require('ghost-s3-compat');
+module.exports = require('ghost-s3-storage-adapter');
 ```
 
 
@@ -75,4 +75,4 @@ in the AWS docs.
 - Original work Copyright (c) 2015 Hoang Pham Huu <phamhuuhoang@gmail.com>
 - Modified work Copyright (c) 2016 Curiosity Media, Inc.
 
-Released under the [MIT license](https://github.com/spanishdict/ghost-s3-compat/blob/master/LICENSE).
+Released under the [MIT license](https://github.com/aorcsik/ghost-s3-storage-adapter/blob/master/LICENSE).

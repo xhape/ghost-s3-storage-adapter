@@ -1,6 +1,6 @@
 {
-  "name": "ghost-s3-compat",
-  "version": "3.0.0",
+  "name": "ghost-s3-storage-adapter",
+  "version": "3.0.3",
   "description": "Store Ghost's images on S3 and proxy requests for local images to S3.",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/spanishdict/ghost-s3-compat.git"
+    "url": "https://github.com/aorcsik/ghost-s3-storage-adapter.git"
   },
   "keywords": [
     "ghost",
@@ -19,12 +19,12 @@
     "plugin",
     "blog"
   ],
-  "author": "Juan Caicedo <juan@spanishdict.com>",
+  "author": "Antal Orcsik <aorcsik@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/spanishdict/ghost-s3-compat/issues"
+    "url": "https://github.com/aorcsik/ghost-s3-storage-adapter/issues"
   },
-  "homepage": "https://github.com/spanishdict/ghost-s3-compat",
+  "homepage": "https://github.com/aorcsik/ghost-s3-storage-adapter",
   "dependencies": {
     "aws-sdk": "^2.3.0",
     "bluebird": "^2.10.2"
