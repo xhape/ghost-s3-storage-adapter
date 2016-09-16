@@ -68,7 +68,6 @@ S3Store.prototype.save = function(image, targetDir) {
     var self = this;
 
     targetDir = targetDir || this.getTargetDir();
-    var filename = this.getUniqueFileName(this, image, targetDir);
 
     try {
         this.initS3Client();
@@ -76,8 +75,13 @@ S3Store.prototype.save = function(image, targetDir) {
         return Promise.reject(error.message);
     }
 
-    return readFileAsync(image.path)
-        .then(function(buffer) {
+    var filename;
+    return this.getUniqueFileName(this, image, targetDir)
+        .then(function(result) {
+            filename = result;
+            return readFileAsync(image.path);
+        })
+        .then(function (buffer) {
             var params = {
                 ACL: 'public-read',
                 Bucket: self.config.bucket,
@@ -86,7 +90,6 @@ S3Store.prototype.save = function(image, targetDir) {
                 ContentType: image.type,
                 CacheControl: 'max-age=' + (1000 * 365 * 24 * 60 * 60) // 365 days
             };
-
             return self.s3Client.putObject(params).promise();
         })
         .tap(function() {
