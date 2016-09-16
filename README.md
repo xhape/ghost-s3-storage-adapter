@@ -18,6 +18,15 @@ $ mkdir content/storage
 $ cp -r node_modules/ghost-s3-compat content/storage/ghost-s3-compat
 ```
 
+Alternative method is to use the node module and create an index.js file with
+folder path 'content/storage/ghost-s3/index.js' (manually create folder if not exist)
+
+```javascript
+'use strict';
+module.exports = require('ghost-s3-compat');
+```
+
+
 ## Configuration
 
 Create new IAM User with permissions to get object from that bucket. Save the

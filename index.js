@@ -1,125 +1,164 @@
 'use strict';
 
 // # S3 storage module for Ghost blog http://ghost.org/
-var fs = require('fs');
-var path = require('path');
-var Bluebird = require('bluebird');
-var AWS = require('aws-sdk');
-var util = require('util');
-var readFileAsync = Bluebird.promisify(fs.readFile);
 
-var BaseStore;
-try {
-    BaseStore = require('ghost/core/server/storage/base');
-} catch (e) {
-    if (e.code !== 'MODULE_NOT_FOUND') throw e;
-    BaseStore = require(path.join(process.cwd(), 'core/server/storage/base'));
-}
-
-var options = {};
-
-function S3Store(config) {
-    BaseStore.call(this);
-    options = config;
-}
-
-util.inherits(S3Store, BaseStore);
-
- /**
- * Return the URL where image assets can be read.
- * @param  {String} bucket [AWS S3 bucket name]
- * @return {String}        [path-style URL of the S3 bucket]
- */
-function getAwsPath(bucket) {
-    var awsRegion = (options.region == 'us-east-1') ? 's3' : 's3-' + options.region;
-    var awsPath = options.assetHost ? options.assetHost : 'https://' + awsRegion + '.amazonaws.com/' + options.bucket + '/';
-    return awsPath;
-}
-
-function logError(error) {
-    console.log('error in ghost-s3', error);
-}
-
-function logInfo(info) {
-    console.log('info in ghost-s3', info);
-}
-
-function validOptions(opts) {
-    return (opts.accessKeyId &&
-        opts.secretAccessKey &&
-        opts.bucket &&
-        opts.region);
-}
-
-S3Store.prototype.getTargetName = function(file) {
-    var ext = path.extname(file.name);
-    var name = path.basename(file.name, ext).replace(/\W/g, '_');
-
-    return path.join(this.getTargetDir(), name + '-' + Date.now() + ext);
+var requireFromGhost = function(module, blocking) {
+    try {
+        return require('ghost/' + module);
+    } catch (e) {
+        if (e.code !== 'MODULE_NOT_FOUND') throw e;
+        try {
+            return require(path.join(process.cwd(), module));
+        } catch (e) {
+            if (e.code !== 'MODULE_NOT_FOUND' || blocking) throw e;
+            return null;
+        }
+    }
 };
 
-S3Store.prototype.save = function(image) {
-    if (!validOptions(options)) {
-      return Bluebird.reject('ghost-s3 is not configured');
+var fs = require('fs'),
+    path = require('path'),
+    util = require('util'),
+    AWS = require('aws-sdk'),
+    Promise = require('bluebird'),
+    readFileAsync = Promise.promisify(fs.readFile),
+    BaseStore = requireFromGhost("core/server/storage/base", false),
+    LocalFileStore = requireFromGhost("core/server/storage/local-file-store", false);
+
+// Use Bluebird Promises in AWS
+AWS.config.setPromisesDependency(Promise);
+
+
+function S3Store(config) {
+    if (BaseStore) BaseStore.call(this);
+    this.config = config;
+    this.s3Client = null;
+}
+
+if (BaseStore) util.inherits(S3Store, BaseStore);
+
+S3Store.prototype.getObjectURL = function(filename) {
+    var assetHost = this.config.assetHost;
+    if (!assetHost) {
+        var reagionSubdomain = (this.config.region == 'us-east-1') ? 's3' : 's3-' + this.config.region;
+        assetHost = 'https://' + reagionSubdomain + '.amazonaws.com/' + this.config.bucket + '/';
     }
+    return assetHost + filename;
+};
 
-    var targetFilename = this.getTargetName(image);
+S3Store.prototype.initS3Client = function() {
+    if (!!this.config.accessKeyId &&
+        !!this.config.secretAccessKey &&
+        !!this.config.bucket &&
+        !!this.config.region) {
+        if (!this.s3Client) {
+            this.s3Client = new AWS.S3({
+                accessKeyId: this.config.accessKeyId,
+                secretAccessKey: this.config.secretAccessKey,
+                region: this.config.region
+            });
+        }
+        return this.s3Client;
+    }
+    throw Error('ghost-s3 is not configured');
+};
 
-    var s3 = new AWS.S3({
-        accessKeyId: options.accessKeyId,
-        secretAccessKey: options.secretAccessKey,
-        bucket: options.bucket,
-        region: options.region
-    });
+// Implement BaseStore::save(image, targetDir)
+S3Store.prototype.save = function(image, targetDir) {
+    targetDir = targetDir || this.getTargetDir();
+    var targetFilename = this.getUniqueFileName(this, image, targetDir);
+
+    try {
+        this.initS3Client();
+    } catch (error) {
+        return Promise.reject(error.message);
+    }
 
     return readFileAsync(image.path)
         .then(function(buffer) {
             var params = {
                 ACL: 'public-read',
-                Bucket: options.bucket,
+                Bucket: this.config.bucket,
                 Key: targetFilename,
                 Body: buffer,
                 ContentType: image.type,
                 CacheControl: 'max-age=' + (1000 * 365 * 24 * 60 * 60) // 365 days
             };
 
-            return s3.putObject(params).promise();
+            return this.s3Client.putObject(params).promise();
         })
         .tap(function() {
-            logInfo('ghost-s3', 'Temp uploaded file path: ' + image.path);
+            console.log('ghost-s3', 'Temp uploaded file path: ' + image.path);
         })
         .then(function(results) {
-            var awsPath = getAwsPath(options.bucket);
-            return Bluebird.resolve(awsPath + targetFilename);
+            return Promise.resolve(this.getObjectURL(targetFilename));
         })
         .catch(function(err) {
-            logError(err);
+            console.error('ghost-s3', err);
             throw err;
         });
 };
 
+// Implement BaseStore::save(filename)
+S3Store.prototype.exists = function(filename) {
+    var params = {
+        Bucket: this.config.bucket,
+        Key: filename
+    };
+
+    try {
+        this.initS3Client();
+    } catch (error) {
+        return Promise.reject(error.message);
+    }
+
+    return this.s3Client.headObject(params).promise()
+        .then(function(results) {
+            return Promise.resolve(true);
+        })
+        .catch(function(err) {
+            return Promise.resolve(false);
+        });
+};
+
+// Implement BaseStore::serve(options)
 // middleware for serving the files
-S3Store.prototype.serve = function() {
-    var s3 = new AWS.S3({
-        accessKeyId: options.accessKeyId,
-        secretAccessKey: options.secretAccessKey,
-        bucket: options.bucket,
-        region: options.region
-    });
+S3Store.prototype.serve = function(options) {
+    options = options || {};
+
+    // Preserve Theme download functionality
+    if (options.isTheme) {
+        if (LocalFileStore) {
+            return (new LocalFileStore()).serve(options);
+        }
+        return function(req, res, next) {
+            res.status(404);
+        };
+    }
+
+    var s3Client;
+    try {
+        s3Client = this.initS3Client();
+    } catch (err) {
+        return function(req, res, next) {
+            console.error("ghost-s3", err);
+            res.status(500);
+        };
+    }
 
     return function (req, res, next) {
         var params = {
-            Bucket: options.bucket,
+            Bucket: this.config.bucket,
             Key: req.path.replace(/^\//, '')
         };
 
-        s3.getObject(params)
+        s3Client.getObject(params)
             .on('httpHeaders', function(statusCode, headers, response) {
                 res.set(headers);
             })
             .createReadStream()
             .on('error', function(err) {
-                logError(err);
+                console.error("ghost-s3", err);
                 res.status(404);
                 next();
             })
@@ -127,12 +166,33 @@ S3Store.prototype.serve = function() {
     };
 };
 
-S3Store.prototype.delete = function() {
+// Implement BaseStore::delete(filename, targetDir)
+S3Store.prototype.delete = function(filename, targetDir) {
+    targetDir = targetDir || this.getTargetDir();
 
-};
+    var pathToDelete = path.join(targetDir, filename);
 
-S3Store.prototype.exists = function() {
+    try {
+        this.initS3Client();
+    } catch (error) {
+        return Promise.reject(error.message);
+    }
 
+    var params = {
+        Bucket: this.config.bucket,
+        Key: pathToDelete
+    };
+
+    return this.s3Client.deleteObject(params).promise()
+        .tap(function() {
+            console.log('ghost-s3', 'Deleted file: ' + pathToDelete);
+        })
+        .then(function(results) {
+            return Promise.resolve(true);
+        })
+        .catch(function(err) {
+            return Promise.resolve(false);
+        });
 };
 
 module.exports = S3Store;
