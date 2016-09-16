@@ -65,8 +65,10 @@ S3Store.prototype.initS3Client = function() {
 
 // Implement BaseStore::save(image, targetDir)
 S3Store.prototype.save = function(image, targetDir) {
+    var self = this;
+
     targetDir = targetDir || this.getTargetDir();
-    var targetFilename = this.getUniqueFileName(this, image, targetDir);
+    var filename = this.getUniqueFileName(this, image, targetDir);
 
     try {
         this.initS3Client();
@@ -78,20 +80,20 @@ S3Store.prototype.save = function(image, targetDir) {
         .then(function(buffer) {
             var params = {
                 ACL: 'public-read',
-                Bucket: this.config.bucket,
-                Key: targetFilename,
+                Bucket: self.config.bucket,
+                Key: filename,
                 Body: buffer,
                 ContentType: image.type,
                 CacheControl: 'max-age=' + (1000 * 365 * 24 * 60 * 60) // 365 days
             };
 
-            return this.s3Client.putObject(params).promise();
+            return self.s3Client.putObject(params).promise();
         })
         .tap(function() {
             console.log('ghost-s3', 'Temp uploaded file path: ' + image.path);
         })
         .then(function(results) {
-            return Promise.resolve(this.getObjectURL(targetFilename));
+            return Promise.resolve(self.getObjectURL(filename));
         })
         .catch(function(err) {
             console.error('ghost-s3', err);
