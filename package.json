@@ -1,6 +1,6 @@
 {
   "name": "ghost-s3-storage-adapter",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "Store Ghost's images on S3 and proxy requests for local images to S3.",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,11 @@
     "plugin",
     "blog"
   ],
-  "author": "Antal Orcsik <aorcsik@gmail.com>",
+  "author": {
+      "name": "Antal Orcsik",
+      "email": "aorcsik@gmail.com>",
+      "url": "http://aorcsik.com"
+  },
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/aorcsik/ghost-s3-storage-adapter/issues"
@@ -28,5 +32,8 @@
   "dependencies": {
     "aws-sdk": "^2.3.0",
     "bluebird": "^2.10.2"
+  },
+  "peerDependencies": {
+    "ghost": ">=0.10.0"
   }
 }

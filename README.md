@@ -1,4 +1,6 @@
-# Ghost S3 Storage, compatability mode
+# Ghost S3 Storage Adapter
+
+**Minimum required Ghost version: 0.10.0**
 
 This module allows you to read and write images from Amazon S3 instead of
 storing them locally.
