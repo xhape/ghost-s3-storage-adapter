@@ -1,10 +1,10 @@
 'use strict';
 
-// # S3 storage module for Ghost blog http://ghost.org/
+// # S3 storage module for Ideamarket
 
-var requireFromGhost = function(module, blocking) {
+var requireFromIdeaMarket = function(module, blocking) {
     try {
-        return require('ghost/' + module);
+        return require('ideamarket/' + module);
     } catch (e) {
         if (e.code !== 'MODULE_NOT_FOUND') throw e;
         try {
@@ -22,8 +22,8 @@ var fs = require('fs'),
     AWS = require('aws-sdk'),
     Promise = require('bluebird'),
     readFileAsync = Promise.promisify(fs.readFile),
-    BaseStore = requireFromGhost("core/server/storage/base", false),
-    LocalFileStore = requireFromGhost("core/server/storage/local-file-store", false);
+    BaseStore = requireFromIdeaMarket("core/server/storage/base", false),
+    LocalFileStore = requireFromIdeaMarket("core/server/storage/local-file-store", false);
 
 // Use Bluebird Promises in AWS
 AWS.config.setPromisesDependency(Promise);
@@ -60,7 +60,7 @@ S3Store.prototype.initS3Client = function() {
         }
         return this.s3Client;
     }
-    throw Error('ghost-s3 is not configured');
+    throw Error('IdeaMarket-s3 is not configured');
 };
 
 // Implement BaseStore::save(image, targetDir)
@@ -93,13 +93,13 @@ S3Store.prototype.save = function(image, targetDir) {
             return self.s3Client.putObject(params).promise();
         })
         .tap(function() {
-            console.log('ghost-s3', 'Temp uploaded file path: ' + image.path);
+            console.log('IdeaMarket-s3', 'Temp uploaded file path: ' + image.path);
         })
         .then(function(results) {
             return Promise.resolve(self.getObjectURL(filename));
         })
         .catch(function(err) {
-            console.error('ghost-s3', err);
+            console.error('IdeaMarket-s3', err);
             throw err;
         });
 };
@@ -190,7 +190,7 @@ S3Store.prototype.delete = function(filename, targetDir) {
 
     return this.s3Client.deleteObject(params).promise()
         .tap(function() {
-            console.log('ghost-s3', 'Deleted file: ' + pathToDelete);
+            console.log('IdeaMarket-s3', 'Deleted file: ' + pathToDelete);
         })
         .then(function(results) {
             return Promise.resolve(true);
